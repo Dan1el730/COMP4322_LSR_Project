@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  */
 public class LSRCompute {
 
-    private static final String DEFAULT_LSA_FILE = "src/data/routes.lsa";
+    private static final String DEFAULT_LSA_FILE = "data/routes.lsa";
 
     // =========================================================
     // Entry point
