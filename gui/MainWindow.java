@@ -77,17 +77,17 @@ public class MainWindow extends JFrame {
         resultsTable.setEnabled(false);
         resultsTable.setFillsViewportHeight(true);
         resultsTable.setShowGrid(true);
-        resultsTable.setGridColor(new Color(0, 120, 60));
-        resultsTable.setForeground(new Color(180, 255, 170));
+        resultsTable.setGridColor(new Color(120, 0, 120));
+        resultsTable.setForeground(new Color(255, 180, 255));
         resultsTable.setBackground(new Color(12, 18, 24));
-        resultsTable.setSelectionBackground(new Color(0, 110, 80));
-        resultsTable.setSelectionForeground(new Color(220, 255, 220));
+        resultsTable.setSelectionBackground(new Color(110, 0, 110));
+        resultsTable.setSelectionForeground(new Color(255, 220, 255));
         resultsTable.setRowHeight(24);
         resultsTable.setFont(new Font("Monospaced", Font.PLAIN, 12));
         tableScrollPane = new JScrollPane(resultsTable);
         TitledBorder titleBorder = BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(new Color(0, 160, 120), 2),
-                "Shortest Paths", 0, 0, new Font("SansSerif", Font.BOLD, 12), new Color(140, 255, 160));
+                BorderFactory.createLineBorder(new Color(160, 0, 160), 2),
+                "Shortest Paths", 0, 0, new Font("SansSerif", Font.BOLD, 12), new Color(255, 140, 255));
         titleBorder.setTitleColor(Color.BLACK);
         tableScrollPane.setBorder(titleBorder);
         tableScrollPane.setPreferredSize(new Dimension(240, 0));
@@ -98,13 +98,13 @@ public class MainWindow extends JFrame {
         logArea.setWrapStyleWord(true);
         logArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         logArea.setBackground(new Color(6, 12, 18));
-        logArea.setForeground(new Color(140, 255, 140));
-        logArea.setCaretColor(new Color(0, 255, 130));
+        logArea.setForeground(new Color(255, 150, 255));
+        logArea.setCaretColor(new Color(255, 0, 200));
         logArea.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         logScrollPane = new JScrollPane(logArea);
         TitledBorder logBorder = BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(new Color(0, 160, 120), 2),
-                "Terminal Log", 0, 0, new Font("SansSerif", Font.BOLD, 12), new Color(140, 255, 160));
+                BorderFactory.createLineBorder(new Color(160, 0, 160), 2),
+                "Terminal Log", 0, 0, new Font("SansSerif", Font.BOLD, 12), new Color(255, 140, 255));
         logBorder.setTitleColor(Color.BLACK);
         logScrollPane.setBorder(logBorder);
 
@@ -130,7 +130,7 @@ public class MainWindow extends JFrame {
         JPanel controlRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 4));
         controlRow.setBackground(new Color(10, 16, 22));
         JLabel sourceLabel = new JLabel("Source:");
-        sourceLabel.setForeground(new Color(150, 255, 140));
+        sourceLabel.setForeground(new Color(255, 150, 255));
         sourceLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
         controlRow.add(sourceLabel);
         controlRow.add(sourceField);
@@ -158,21 +158,21 @@ public class MainWindow extends JFrame {
     private void applyDarkTheme() {
         UIManager.put("Panel.background", new Color(10, 16, 22));
         UIManager.put("Button.background", new Color(18, 24, 30));
-        UIManager.put("Button.foreground", new Color(150, 255, 140));
-        UIManager.put("Button.border", BorderFactory.createLineBorder(new Color(0, 220, 120), 2));
+        UIManager.put("Button.foreground", new Color(255, 150, 255));
+        UIManager.put("Button.border", BorderFactory.createLineBorder(new Color(220, 0, 220), 2));
         UIManager.put("TextField.background", new Color(12, 18, 24));
-        UIManager.put("TextField.foreground", new Color(170, 255, 150));
-        UIManager.put("TextField.caretForeground", new Color(0, 255, 120));
+        UIManager.put("TextField.foreground", new Color(255, 170, 255));
+        UIManager.put("TextField.caretForeground", new Color(255, 0, 200));
         UIManager.put("Table.background", new Color(12, 18, 24));
-        UIManager.put("Table.foreground", new Color(180, 255, 160));
-        UIManager.put("Table.gridColor", new Color(0, 120, 60));
+        UIManager.put("Table.foreground", new Color(255, 180, 255));
+        UIManager.put("Table.gridColor", new Color(120, 0, 120));
     }
 
     private JButton styleButton(JButton button) {
         button.setOpaque(true);
         button.setBackground(new Color(18, 24, 30));
-        button.setForeground(new Color(150, 255, 140));
-        button.setBorder(BorderFactory.createLineBorder(new Color(0, 220, 120), 2));
+        button.setForeground(new Color(255, 150, 255));
+        button.setBorder(BorderFactory.createLineBorder(new Color(220, 0, 220), 2));
         button.setFocusPainted(false);
         button.setFont(new Font("SansSerif", Font.BOLD, 12));
         return button;
@@ -180,9 +180,9 @@ public class MainWindow extends JFrame {
 
     private void styleTextField(JTextField field) {
         field.setBackground(new Color(10, 16, 22));
-        field.setForeground(new Color(170, 255, 140));
-        field.setCaretColor(new Color(0, 255, 140));
-        field.setBorder(BorderFactory.createLineBorder(new Color(0, 220, 120), 2));
+        field.setForeground(new Color(255, 170, 255));
+        field.setCaretColor(new Color(255, 0, 200));
+        field.setBorder(BorderFactory.createLineBorder(new Color(220, 0, 220), 2));
         field.setFont(new Font("Monospaced", Font.PLAIN, 12));
     }
 

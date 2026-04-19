@@ -3,6 +3,7 @@ package gui;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.*;
 import java.util.*;
 import java.util.List;
@@ -19,21 +20,25 @@ public class GraphPanel extends JPanel {
     private static final int PADDING     = 55;
     private static final int NODE_RADIUS = 18;
 
-    // ---- Theme colors - Dark cybersecurity dashboard ----
-    private static final Color BACKGROUND_COLOR = new Color(10, 16, 22);
-    private static final Color GRID_COLOR_LIGHT = new Color(0, 90, 40, 40);
-    private static final Color GRID_COLOR_DARK  = new Color(0, 60, 30, 24);
-    private static final Color COLOR_SETTLED_NODE = new Color(255, 255,   0); // yellow (impacted)
-    private static final Color COLOR_CURRENT_NODE = new Color(255,   0,   0); // red (origin)
-    private static final Color COLOR_PATH_EDGE    = new Color(80, 255, 160); // terminal green
-    private static final Color COLOR_DEFAULT_NODE = new Color(40, 175, 80);
-    private static final Color COLOR_DEFAULT_EDGE = new Color(0, 130, 90, 180);
-    private static final Color COLOR_EDGE_LABEL   = new Color(160, 255, 170);
-    private static final Color COLOR_NODE_GLOW    = new Color(0, 255, 150, 80);
-    private static final Color COLOR_NODE_BORDER  = new Color(0, 230, 130);
-    private static final Color COLOR_LABEL        = new Color(170, 255, 140);
+    // ---- Theme colors - Dark cybersecurity dashboard (Magenta) ----
+    private static final Color BACKGROUND_COLOR = new Color(10, 12, 22);
+    private static final Color GRID_COLOR_LIGHT = new Color(90, 0, 90, 40);
+    private static final Color GRID_COLOR_DARK  = new Color(60, 0, 60, 24);
+    private static final Color COLOR_SETTLED_NODE = new Color(30,  80, 220); // deep blue (visited)
+    private static final Color COLOR_CURRENT_NODE = new Color(255,  40,  40); // red (origin)
+    private static final Color COLOR_PATH_EDGE    = new Color(255, 100, 255); // bright magenta
+    private static final Color COLOR_DEFAULT_NODE = new Color(175,  40, 175);
+    private static final Color COLOR_DEFAULT_EDGE = new Color(140,   0, 140, 180);
+    private static final Color COLOR_EDGE_LABEL   = new Color(255, 200, 255);
+    private static final Color COLOR_NODE_GLOW    = new Color(255,   0, 255, 80);
+    private static final Color COLOR_NODE_BORDER  = new Color(230,   0, 230);
+    private static final Color COLOR_LABEL        = new Color(255, 180, 255);
+    private static final Color COLOR_HOVER_EDGE   = new Color(0, 220, 255);       // cyan hover
+    private static final Color COLOR_HOVER_GLOW   = new Color(0, 200, 255, 60);   // cyan glow
+    private static final Color COLOR_HOVER_BORDER = new Color(0, 240, 255);       // cyan node ring
     private static final float STROKE_DEFAULT     = 1.5f;
     private static final float STROKE_HIGHLIGHT   = 3.2f;
+    private static final float STROKE_HOVER       = 3.5f;
 
     // ---- Highlighting ----
     /** Nodes settled so far in step-by-step mode (accumulated). */
@@ -42,6 +47,8 @@ public class GraphPanel extends JPanel {
     private final Set<Map.Entry<String,String>> highlightedEdges = new HashSet<>();
     /** The most recently settled node (shown in red). */
     private String currentNode = null;
+    /** Node currently under the mouse cursor (for hover effects). */
+    private String hoveredNode = null;
 
     private Consumer<String> onNodeClicked;
 
@@ -57,11 +64,57 @@ public class GraphPanel extends JPanel {
         calculateNodePositions();
 
         addMouseListener(new MouseAdapter() {
-        @Override
-        public void mouseClicked(MouseEvent e) {
-            handleMouseClick(e);
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                handleMouseClick(e);
+            }
+        });
+
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                String found = null;
+                for (Map.Entry<String, Point2D> entry : nodePositions.entrySet()) {
+                    if (entry.getValue().distance(e.getPoint()) < NODE_RADIUS) {
+                        found = entry.getKey();
+                        break;
+                    }
+                }
+                if (!Objects.equals(found, hoveredNode)) {
+                    hoveredNode = found;
+                    repaint();
+                }
+            }
+        });
+
+        ToolTipManager.sharedInstance().registerComponent(this);
+    }
+
+    // =========================================================
+    // Tooltip
+    // =========================================================
+
+    @Override
+    public String getToolTipText(MouseEvent e) {
+        for (Map.Entry<String, Point2D> entry : nodePositions.entrySet()) {
+            if (entry.getValue().distance(e.getPoint()) < NODE_RADIUS) {
+                String node = entry.getKey();
+                Map<String, Integer> neighbors = graph.getOrDefault(node, Map.of());
+                StringBuilder sb = new StringBuilder("<html><b style='color:#00DCFF;'>Node ");
+                sb.append(node).append("</b> &nbsp;[").append(neighbors.size()).append(" links]<br>");
+                if (neighbors.isEmpty()) {
+                    sb.append("<i>No links</i>");
+                } else {
+                    neighbors.entrySet().stream()
+                        .sorted(Map.Entry.comparingByKey())
+                        .forEach(nb -> sb.append("&nbsp; ").append(nb.getKey())
+                            .append(": <b>").append(nb.getValue()).append("</b>"));
+                }
+                sb.append("</html>");
+                return sb.toString();
+            }
         }
-    });
+        return null;
     }
 
     // =========================================================
@@ -172,6 +225,8 @@ public class GraphPanel extends JPanel {
                 String u = src.compareTo(tgt) < 0 ? src : tgt;
                 String v = src.compareTo(tgt) < 0 ? tgt : src;
                 boolean highlighted = highlightedEdges.contains(Map.entry(u, v));
+                boolean hovered = hoveredNode != null
+                        && (src.equals(hoveredNode) || tgt.equals(hoveredNode));
                 int cost = nb.getValue();
 
                 // Vary thickness by cost (bandwidth representation)
@@ -181,30 +236,48 @@ public class GraphPanel extends JPanel {
                 
                 BasicStroke glowStroke = new BasicStroke(glowWidth, BasicStroke.CAP_ROUND,
                         BasicStroke.JOIN_ROUND, 0, dash, 0);
-                BasicStroke edgeStroke = new BasicStroke(highlighted ? STROKE_HIGHLIGHT : baseWidth,
+                float activeStroke = highlighted ? STROKE_HIGHLIGHT
+                                   : hovered    ? STROKE_HOVER
+                                   :              baseWidth;
+                BasicStroke edgeStroke = new BasicStroke(activeStroke,
                         BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0,
                         highlighted ? new float[]{12f, 6f} : dash, 0);
 
                 Line2D line = new Line2D.Double(srcPos, tgtPos);
                 
-                // Glow effect for non-highlighted edges
-                if (!highlighted) {
+                // Glow effect
+                if (hovered && !highlighted) {
+                    g2.setColor(COLOR_HOVER_GLOW);
+                    g2.setStroke(new BasicStroke(glowWidth + 2f, BasicStroke.CAP_ROUND,
+                            BasicStroke.JOIN_ROUND));
+                    g2.draw(line);
+                } else if (!highlighted) {
                     g2.setColor(COLOR_NODE_GLOW);
                     g2.setStroke(glowStroke);
                     g2.draw(line);
                 }
                 
                 // Main edge
-                g2.setColor(highlighted ? COLOR_PATH_EDGE : COLOR_DEFAULT_EDGE);
+                Color edgeColor = highlighted ? COLOR_PATH_EDGE
+                                : hovered    ? COLOR_HOVER_EDGE
+                                :              COLOR_DEFAULT_EDGE;
+                g2.setColor(edgeColor);
                 g2.setStroke(edgeStroke);
                 g2.draw(line);
 
-                // Cost label (2x bigger - 22pt)
-                g2.setColor(COLOR_EDGE_LABEL);
-                g2.setFont(new Font("Monospaced", Font.PLAIN, 22));
+                // Cost label (bold, with dark shadow for readability)
                 double mx = (srcPos.getX() + tgtPos.getX()) / 2;
                 double my = (srcPos.getY() + tgtPos.getY()) / 2;
-                g2.drawString(String.valueOf(cost), (float) mx + 4, (float) my - 6);
+                g2.setFont(new Font("SansSerif", Font.BOLD, 22));
+                String costStr = String.valueOf(cost);
+                // Shadow outline
+                g2.setColor(new Color(0, 0, 0, 200));
+                for (int dx = -1; dx <= 1; dx++)
+                    for (int dy = -1; dy <= 1; dy++)
+                        if (dx != 0 || dy != 0)
+                            g2.drawString(costStr, (float) mx + 4 + dx, (float) my - 6 + dy);
+                g2.setColor(COLOR_EDGE_LABEL);
+                g2.drawString(costStr, (float) mx + 4, (float) my - 6);
             }
         }
         g2.setStroke(new BasicStroke(STROKE_DEFAULT));
@@ -237,20 +310,29 @@ public class GraphPanel extends JPanel {
             g2.fill(circle);
 
             // Glow effect outer ring
-            g2.setColor(COLOR_NODE_GLOW);
-            g2.setStroke(new BasicStroke(8f));
+            boolean isHovered = name.equals(hoveredNode);
+            g2.setColor(isHovered ? COLOR_HOVER_GLOW : COLOR_NODE_GLOW);
+            g2.setStroke(new BasicStroke(isHovered ? 12f : 8f));
             g2.draw(circle);
 
             // Neon border
-            g2.setColor(COLOR_NODE_BORDER);
-            g2.setStroke(new BasicStroke(2.4f));
+            g2.setColor(isHovered ? COLOR_HOVER_BORDER : COLOR_NODE_BORDER);
+            g2.setStroke(new BasicStroke(isHovered ? 3.0f : 2.4f));
             g2.draw(circle);
 
-            // Centred label (bold, black, 20pt)
+            // Centred label (bold, white for contrast against magenta/yellow/red)
             int tw = fm.stringWidth(name);
             int th = fm.getAscent() - fm.getDescent();
-            g2.setColor(Color.BLACK);
-            g2.drawString(name, (float)(pos.getX() - tw / 2.0), (float)(pos.getY() + th / 2.0));
+            float lx = (float)(pos.getX() - tw / 2.0);
+            float ly = (float)(pos.getY() + th / 2.0);
+            // Dark outline for readability on any node color
+            g2.setColor(new Color(0, 0, 0, 220));
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++)
+                    if (dx != 0 || dy != 0)
+                        g2.drawString(name, lx + dx, ly + dy);
+            g2.setColor(Color.WHITE);
+            g2.drawString(name, lx, ly);
         }
     }
 
