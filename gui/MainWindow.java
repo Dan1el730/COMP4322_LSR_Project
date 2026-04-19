@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.io.File;
 
 /**
  * Main GUI window for the LSR Pathfinding application.
@@ -33,6 +34,7 @@ public class MainWindow extends JFrame {
     private JButton    stepModeBtn;
     private JButton    nextStepBtn;
     private JButton    reloadBtn;
+    private JButton    loadFileBtn;
 
     // ---- Data ----
     private Map<String, Map<String, Integer>> graphData;
@@ -67,6 +69,11 @@ public class MainWindow extends JFrame {
     private void initComponents() {
         graphPanel = new GraphPanel(graphData);
 
+        graphPanel.setOnNodeClicked(nodeName -> {
+            sourceField.setText(nodeName);
+            log("Selected source node: " + nodeName);
+        });
+
         resultsTable = new JTable();
         resultsTable.setEnabled(false);
         resultsTable.setFillsViewportHeight(true);
@@ -89,6 +96,11 @@ public class MainWindow extends JFrame {
         reloadBtn     = new JButton("Reload Data");
 
         nextStepBtn.setVisible(false);
+
+        reloadBtn   = new JButton("Reload Data");
+        loadFileBtn = new JButton("Load LSA File"); 
+
+        nextStepBtn.setVisible(false);
     }
 
     private void layoutComponents() {
@@ -105,6 +117,7 @@ public class MainWindow extends JFrame {
         controlRow.add(stepModeBtn);
         controlRow.add(nextStepBtn);
         controlRow.add(reloadBtn);
+        controlRow.add(loadFileBtn);
 
         JPanel southPanel = new JPanel(new BorderLayout());
         southPanel.add(controlRow,    BorderLayout.NORTH);
@@ -118,6 +131,7 @@ public class MainWindow extends JFrame {
         stepModeBtn .addActionListener(e -> handleStartStepMode());
         nextStepBtn .addActionListener(e -> handleNextStep());
         reloadBtn   .addActionListener(e -> handleReload());
+        loadFileBtn .addActionListener(e -> handleOpenFile());
     }
 
     // =========================================================
@@ -185,6 +199,24 @@ public class MainWindow extends JFrame {
         results.values().forEach(r -> log("  " + r.toSummaryLine()));
         setStepModeUI(false);
         inStepMode = false;
+    }
+
+    private void handleOpenFile() {
+        JFileChooser fileChooser = new JFileChooser(".");
+        fileChooser.setDialogTitle("Select LSA Topology File");
+        int userSelection = fileChooser.showOpenDialog(this);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToOpen = fileChooser.getSelectedFile();
+            try {
+                // Use your existing LSALoader
+                this.graphData = new HashMap<>(LSALoader.load(fileToOpen.getAbsolutePath()));
+                this.graphPanel.updateGraph(graphData); // Refresh visual
+                log("Loaded new topology: " + fileToOpen.getName());
+            } catch (IOException ex) {
+                showError("Could not load file: " + ex.getMessage());
+            }
+        }
     }
 
     private void handleModifyNetwork() {
@@ -300,6 +332,7 @@ public class MainWindow extends JFrame {
         runAllBtn   .setEnabled(!stepping);
         modifyNetBtn.setEnabled(!stepping);
         reloadBtn   .setEnabled(!stepping);
+        loadFileBtn.setEnabled(!stepping);
     }
 
     private void populateResultsTable(String source, Map<String, PathResult> results) {
