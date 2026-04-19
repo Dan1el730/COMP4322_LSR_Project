@@ -5,6 +5,9 @@ import java.awt.*;
 import java.awt.geom.*;
 import java.util.*;
 import java.util.List;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.function.Consumer;
 
 public class GraphPanel extends JPanel {
 
@@ -23,6 +26,8 @@ public class GraphPanel extends JPanel {
     private final Set<Map.Entry<String,String>> highlightedEdges = new HashSet<>();
     /** The most recently settled node (shown in amber). */
     private String currentNode = null;
+
+    private Consumer<String> onNodeClicked;
 
     // Colours
     private static final Color COLOR_SETTLED_NODE = new Color(100, 180, 255); // light blue
@@ -44,12 +49,29 @@ public class GraphPanel extends JPanel {
         setBackground(Color.WHITE);
         setPreferredSize(new Dimension(640, 520));
         calculateNodePositions();
+
+        addMouseListener(new MouseAdapter() {
+        @Override
+        public void mouseClicked(MouseEvent e) {
+            handleMouseClick(e);
+        }
+    });
     }
 
     // =========================================================
     // Layout
     // =========================================================
 
+    private void handleMouseClick(MouseEvent e) {
+        for (Map.Entry<String, Point2D> entry : nodePositions.entrySet()) {
+            if (entry.getValue().distance(e.getPoint()) < NODE_RADIUS) {
+                if (onNodeClicked != null) {
+                    onNodeClicked.accept(entry.getKey());
+                }
+                break;
+            }
+        }
+    }
     /** Arranges all nodes equally around a circle. */
     private void calculateNodePositions() {
         Set<String> allNodes = new HashSet<>(graph.keySet());
@@ -226,6 +248,10 @@ public class GraphPanel extends JPanel {
         return Collections.unmodifiableMap(nodePositions);
     }
 
+    public void setOnNodeClicked(Consumer<String> callback) {
+        this.onNodeClicked = callback;
+    }
+        
     // =========================================================
     // Helpers
     // =========================================================
@@ -235,6 +261,8 @@ public class GraphPanel extends JPanel {
         String v = a.compareTo(b) < 0 ? b : a;
         highlightedEdges.add(Map.entry(u, v));
     }
+
+    
 }
 
 
