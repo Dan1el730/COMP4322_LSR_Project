@@ -1,18 +1,16 @@
 package gui;
 
 import graph.LSALoader;
+import java.awt.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import lsr.DijkstraLSR;
 import lsr.PathResult;
 import lsr.StepResult;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.io.IOException;
-import java.util.*;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.io.File;
 
 /**
  * Main GUI window for the LSR Pathfinding application.
@@ -33,7 +31,6 @@ public class MainWindow extends JFrame {
     private JButton    runAllBtn;
     private JButton    stepModeBtn;
     private JButton    nextStepBtn;
-    private JButton    reloadBtn;
     private JButton    loadFileBtn;
 
     // ---- Data ----
@@ -93,12 +90,8 @@ public class MainWindow extends JFrame {
         runAllBtn     = new JButton("Run Dijkstra (All)");
         stepModeBtn   = new JButton("Step Mode");
         nextStepBtn   = new JButton("Next Step");
-        reloadBtn     = new JButton("Reload Data");
-
-        nextStepBtn.setVisible(false);
-
-        reloadBtn   = new JButton("Reload Data");
-        loadFileBtn = new JButton("Load LSA File"); 
+        loadFileBtn   = new JButton("Load LSA File");
+        loadFileBtn.setToolTipText("Open a .lsa topology file");
 
         nextStepBtn.setVisible(false);
     }
@@ -116,7 +109,6 @@ public class MainWindow extends JFrame {
         controlRow.add(runAllBtn);
         controlRow.add(stepModeBtn);
         controlRow.add(nextStepBtn);
-        controlRow.add(reloadBtn);
         controlRow.add(loadFileBtn);
 
         JPanel southPanel = new JPanel(new BorderLayout());
@@ -130,7 +122,6 @@ public class MainWindow extends JFrame {
         runAllBtn   .addActionListener(e -> handleRunAll());
         stepModeBtn .addActionListener(e -> handleStartStepMode());
         nextStepBtn .addActionListener(e -> handleNextStep());
-        reloadBtn   .addActionListener(e -> handleReload());
         loadFileBtn .addActionListener(e -> handleOpenFile());
     }
 
@@ -331,7 +322,6 @@ public class MainWindow extends JFrame {
         nextStepBtn .setVisible(stepping);
         runAllBtn   .setEnabled(!stepping);
         modifyNetBtn.setEnabled(!stepping);
-        reloadBtn   .setEnabled(!stepping);
         loadFileBtn.setEnabled(!stepping);
     }
 
