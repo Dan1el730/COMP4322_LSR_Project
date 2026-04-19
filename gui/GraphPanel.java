@@ -1,13 +1,13 @@
 package gui;
 
-import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.geom.*;
 import java.util.*;
 import java.util.List;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.function.Consumer;
+import javax.swing.*;
 
 public class GraphPanel extends JPanel {
 
@@ -19,25 +19,31 @@ public class GraphPanel extends JPanel {
     private static final int PADDING     = 55;
     private static final int NODE_RADIUS = 18;
 
+    // ---- Theme colors - Dark cybersecurity dashboard ----
+    private static final Color BACKGROUND_COLOR = new Color(10, 16, 22);
+    private static final Color GRID_COLOR_LIGHT = new Color(0, 90, 40, 40);
+    private static final Color GRID_COLOR_DARK  = new Color(0, 60, 30, 24);
+    private static final Color COLOR_SETTLED_NODE = new Color(255, 255,   0); // yellow (impacted)
+    private static final Color COLOR_CURRENT_NODE = new Color(255,   0,   0); // red (origin)
+    private static final Color COLOR_PATH_EDGE    = new Color(80, 255, 160); // terminal green
+    private static final Color COLOR_DEFAULT_NODE = new Color(40, 175, 80);
+    private static final Color COLOR_DEFAULT_EDGE = new Color(0, 130, 90, 180);
+    private static final Color COLOR_EDGE_LABEL   = new Color(160, 255, 170);
+    private static final Color COLOR_NODE_GLOW    = new Color(0, 255, 150, 80);
+    private static final Color COLOR_NODE_BORDER  = new Color(0, 230, 130);
+    private static final Color COLOR_LABEL        = new Color(170, 255, 140);
+    private static final float STROKE_DEFAULT     = 1.5f;
+    private static final float STROKE_HIGHLIGHT   = 3.2f;
+
     // ---- Highlighting ----
     /** Nodes settled so far in step-by-step mode (accumulated). */
     private final Set<String>                   highlightedNodes = new HashSet<>();
     /** Edges on the best paths highlighted so far (accumulated). */
     private final Set<Map.Entry<String,String>> highlightedEdges = new HashSet<>();
-    /** The most recently settled node (shown in amber). */
+    /** The most recently settled node (shown in red). */
     private String currentNode = null;
 
     private Consumer<String> onNodeClicked;
-
-    // Colours
-    private static final Color COLOR_SETTLED_NODE = new Color(100, 180, 255); // light blue
-    private static final Color COLOR_CURRENT_NODE = new Color(255, 200,  50); // amber
-    private static final Color COLOR_PATH_EDGE    = new Color( 50, 200,  80); // green
-    private static final Color COLOR_DEFAULT_NODE = new Color(255, 160,  60); // orange
-    private static final Color COLOR_DEFAULT_EDGE = Color.DARK_GRAY;
-    private static final Color COLOR_EDGE_LABEL   = new Color( 30, 100, 180);
-    private static final float STROKE_DEFAULT     = 1.5f;
-    private static final float STROKE_HIGHLIGHT   = 3.0f;
 
     // =========================================================
     // Constructor
@@ -46,7 +52,7 @@ public class GraphPanel extends JPanel {
     public GraphPanel(Map<String, Map<String, Integer>> graph) {
         this.graph         = graph != null ? new HashMap<>(graph) : new HashMap<>();
         this.nodePositions = new HashMap<>();
-        setBackground(Color.WHITE);
+        setBackground(BACKGROUND_COLOR);
         setPreferredSize(new Dimension(640, 520));
         calculateNodePositions();
 
@@ -114,6 +120,14 @@ public class GraphPanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        // Dark background
+        g2.setColor(BACKGROUND_COLOR);
+        g2.fillRect(0, 0, getWidth(), getHeight());
+        
+        // Digital grid background
+        drawBackgroundGrid(g2);
 
         if (graph.isEmpty()) {
             g2.setColor(Color.RED);
@@ -125,6 +139,18 @@ public class GraphPanel extends JPanel {
         drawEdges(g2);
         drawNodes(g2);
         g2.dispose();
+    }
+
+    private void drawBackgroundGrid(Graphics2D g2) {
+        int step = 28;
+        for (int x = 0; x <= getWidth(); x += step) {
+            g2.setColor(x % (step * 4) == 0 ? GRID_COLOR_LIGHT : GRID_COLOR_DARK);
+            g2.drawLine(x, 0, x, getHeight());
+        }
+        for (int y = 0; y <= getHeight(); y += step) {
+            g2.setColor(y % (step * 4) == 0 ? GRID_COLOR_LIGHT : GRID_COLOR_DARK);
+            g2.drawLine(0, y, getWidth(), y);
+        }
     }
 
     private void drawEdges(Graphics2D g2) {
@@ -146,26 +172,47 @@ public class GraphPanel extends JPanel {
                 String u = src.compareTo(tgt) < 0 ? src : tgt;
                 String v = src.compareTo(tgt) < 0 ? tgt : src;
                 boolean highlighted = highlightedEdges.contains(Map.entry(u, v));
+                int cost = nb.getValue();
 
+                // Vary thickness by cost (bandwidth representation)
+                float baseWidth = Math.min(4.0f, 1.4f + cost * 0.16f);
+                float glowWidth = baseWidth + 2.5f;
+                float[] dash = cost > 5 ? new float[]{10f, 6f} : new float[]{6f, 4f};
+                
+                BasicStroke glowStroke = new BasicStroke(glowWidth, BasicStroke.CAP_ROUND,
+                        BasicStroke.JOIN_ROUND, 0, dash, 0);
+                BasicStroke edgeStroke = new BasicStroke(highlighted ? STROKE_HIGHLIGHT : baseWidth,
+                        BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0,
+                        highlighted ? new float[]{12f, 6f} : dash, 0);
+
+                Line2D line = new Line2D.Double(srcPos, tgtPos);
+                
+                // Glow effect for non-highlighted edges
+                if (!highlighted) {
+                    g2.setColor(COLOR_NODE_GLOW);
+                    g2.setStroke(glowStroke);
+                    g2.draw(line);
+                }
+                
+                // Main edge
                 g2.setColor(highlighted ? COLOR_PATH_EDGE : COLOR_DEFAULT_EDGE);
-                g2.setStroke(new BasicStroke(highlighted ? STROKE_HIGHLIGHT : STROKE_DEFAULT,
-                        BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2.draw(new Line2D.Double(srcPos, tgtPos));
+                g2.setStroke(edgeStroke);
+                g2.draw(line);
 
-                // Cost label
+                // Cost label (2x bigger - 22pt)
                 g2.setColor(COLOR_EDGE_LABEL);
-                g2.setStroke(new BasicStroke(STROKE_DEFAULT));
-                g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+                g2.setFont(new Font("Monospaced", Font.PLAIN, 22));
                 double mx = (srcPos.getX() + tgtPos.getX()) / 2;
                 double my = (srcPos.getY() + tgtPos.getY()) / 2;
-                g2.drawString(String.valueOf(nb.getValue()), (float) mx + 4, (float) my - 4);
+                g2.drawString(String.valueOf(cost), (float) mx + 4, (float) my - 6);
             }
         }
         g2.setStroke(new BasicStroke(STROKE_DEFAULT));
     }
 
     private void drawNodes(Graphics2D g2) {
-        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
+        // Node label font (1.5x bigger, 20pt, bold, black)
+        g2.setFont(new Font("Monospaced", Font.BOLD, 20));
         FontMetrics fm = g2.getFontMetrics();
 
         for (Map.Entry<String, Point2D> entry : nodePositions.entrySet()) {
@@ -179,13 +226,27 @@ public class GraphPanel extends JPanel {
                        : highlightedNodes.contains(name) ? COLOR_SETTLED_NODE
                        :                                   COLOR_DEFAULT_NODE;
 
-            g2.setColor(fill);
+            // Radial gradient for glowing hub effect
+            float[] stops = {0.1f, 1f};
+            Color inner = fill.brighter();
+            Color outer = fill.darker().darker();
+            RadialGradientPaint paint = new RadialGradientPaint(
+                    new Point2D.Double(pos.getX(), pos.getY()), NODE_RADIUS,
+                    stops, new Color[]{inner, outer});
+            g2.setPaint(paint);
             g2.fill(circle);
-            g2.setColor(Color.BLACK);
-            g2.setStroke(new BasicStroke(1.5f));
+
+            // Glow effect outer ring
+            g2.setColor(COLOR_NODE_GLOW);
+            g2.setStroke(new BasicStroke(8f));
             g2.draw(circle);
 
-            // Centred label
+            // Neon border
+            g2.setColor(COLOR_NODE_BORDER);
+            g2.setStroke(new BasicStroke(2.4f));
+            g2.draw(circle);
+
+            // Centred label (bold, black, 20pt)
             int tw = fm.stringWidth(name);
             int th = fm.getAscent() - fm.getDescent();
             g2.setColor(Color.BLACK);
